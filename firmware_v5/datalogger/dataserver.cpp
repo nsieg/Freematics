@@ -39,6 +39,7 @@
 #error Unsupported board type
 #endif
 #include "config.h"
+//#include <ESPmDNS.h>
 
 #define WIFI_TIMEOUT 5000
 
@@ -55,7 +56,7 @@ uint32_t hall_sens_read();
 HttpParam httpParam;
 
 int handlerLiveData(UrlHandlerParam* param);
-int handlerControl(UrlHandlerParam* param);
+//int handlerControl(UrlHandlerParam* param);
 
 uint16_t hex2uint16(const char *p);
 
@@ -305,7 +306,7 @@ int handlerLogDelete(UrlHandlerParam* param)
 UrlHandler urlHandlerList[]={
     {"api/live", handlerLiveData},
     {"api/info", handlerInfo},
-    {"api/control", handlerControl},
+   // {"api/control", handlerControl},
 #if STORAGE != STORAGE_NONE
     {"api/list", handlerLogList},
     {"api/data", handlerLogData},
@@ -383,7 +384,7 @@ bool serverSetup()
 #if ENABLE_HTTPD
     mwInitParam(&httpParam, 80, "/spiffs");
     httpParam.pxUrlHandler = urlHandlerList;
-    MDNS.addService("http", "tcp", 80);
+    //MDNS.addService("http", "tcp", 80);
 
     if (mwServerStart(&httpParam)) {
         return false;
