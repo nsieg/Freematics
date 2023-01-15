@@ -22,6 +22,8 @@
 #include <FreematicsPlus.h>
 #include "datalogger.h"
 #include "config.h"
+#include <BLEDevice.h>
+#include <BLEScan.h>
 
 // states
 #define STATE_STORE_READY 0x1
@@ -730,6 +732,23 @@ void showSysInfo()
   Serial.println();
 }
 
+void processBleBeacons() {
+    BLEDevice::init("");
+    BLEScan* pBLEScan = BLEDevice::getScan();
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(99);
+
+    BLEScanResults foundDevices = pBLEScan->start(1);
+
+    for (int j = 0; j < foundDevices.getCount(); j++) {
+        Serial.println(foundDevices.getDevice(j).getAddress().toString().c_str());
+        Serial.println(foundDevices.getDevice(j).getRSSI());
+    } 
+
+    pBLEScan->clearResults();        
+}
+
 
 void setup()
 {
@@ -955,6 +974,8 @@ void loop()
 #if !ENABLE_SERIAL_OUT
     showStats();
 #endif
+
+    processBleBeacons();
 
 #if ENABLE_HTTPD
     serverProcess(0);
