@@ -1,0 +1,1 @@
+int truth = 42;

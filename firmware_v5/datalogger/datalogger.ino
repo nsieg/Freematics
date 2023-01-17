@@ -22,8 +22,9 @@
 #include <FreematicsPlus.h>
 #include "datalogger.h"
 #include "config.h"
-#include <BLEDevice.h>
-#include <BLEScan.h>
+//#include <BLEDevice.h>
+//#include <BLEScan.h>
+#include "NimBLEDevice.h"
 
 // states
 #define STATE_STORE_READY 0x1
@@ -732,23 +733,30 @@ void showSysInfo()
   Serial.println();
 }
 
+class MyAdvertisedDeviceCallbacks: public NimBLEAdvertisedDeviceCallbacks {
+    void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
+      Serial.printf("Advertised Device: %s \n", advertisedDevice->toString().c_str());
+      Serial.printf("%s @ %i", advertisedDevice->getAddress().toString().c_str(), advertisedDevice->getRSSI());
+    }
+};
+
+BLEScan* pBLEScan;
+
 void processBleBeacons() {
-    BLEDevice::init("");
-    BLEScan* pBLEScan = BLEDevice::getScan();
-    pBLEScan->setActiveScan(true);
-    pBLEScan->setInterval(100);
-    pBLEScan->setWindow(99);
-
-    BLEScanResults foundDevices = pBLEScan->start(1);
-
-    for (int j = 0; j < foundDevices.getCount(); j++) {
-        Serial.println(foundDevices.getDevice(j).getAddress().toString().c_str());
-        Serial.println(foundDevices.getDevice(j).getRSSI());
-    } 
-
-    pBLEScan->clearResults();        
+    if(pBLEScan->isScanning() == false) {
+        pBLEScan->start(0, nullptr, false);
+    }
 }
 
+void initBleBeacons() {
+    BLEDevice::init("");
+    pBLEScan = BLEDevice::getScan();
+    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(), false);
+    pBLEScan->setActiveScan(true);
+    pBLEScan->setInterval(97);
+    pBLEScan->setWindow(37);
+    pBLEScan->setMaxResults(0);       
+}
 
 void setup()
 {
@@ -850,6 +858,8 @@ void setup()
 #ifdef PIN_LED
     pinMode(PIN_LED, LOW);
 #endif
+
+    initBleBeacons();
 
     logger.init();
 }
