@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
-#include "../list.h"
+#include "../list.cpp"
 
-// Demonstrate some basic assertions.
-TEST(HelloTest, TellTruth) {
-  // Expect two strings not to be equal.
-  EXPECT_STRNE("hello", "world");
-  // Expect equality.
-  EXPECT_EQ(7 * 6, truth);
+TEST(BeaconList, ShouldInit) {
+  BeaconList bl = BeaconList(5);
+
+  EXPECT_EQ(bl.size(), 0);
+  //ASSERT_EQ(bl.get(0), Beacon());
 }
