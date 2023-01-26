@@ -12,7 +12,10 @@ class Beacon {
         const int rssi;  
         bool operator<(const Beacon& b) const {
             return this->address != b.address && this->rssi <= b.rssi;
-        }      
+        }   
+        bool operator==(const Beacon& b) const {
+            return this->address == b.address && this->rssi == b.rssi;
+        }    
 };
 
 class BeaconList {

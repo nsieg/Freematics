@@ -10,11 +10,18 @@ Beacon::Beacon(string address, int rssi)
     : address(address),rssi(rssi) {
 }
 
+std::ostream &operator<<(std::ostream &os, Beacon const &b) { 
+    return os << "(" + b.address + " - " + std::to_string(b.rssi) + ")";
+}
+
 BeaconList::BeaconList(int maxSize)
     : maxSize(maxSize) {
 }
 
 Beacon BeaconList::get(int pos) {
+    if (pos >= this->size()) {
+        throw std::out_of_range("Index out of range");
+    }    
     set<Beacon>::iterator it = this->beacons.begin();
     std::advance(it, pos);
     return *it;
