@@ -25,6 +25,7 @@
 //#include <BLEDevice.h>
 //#include <BLEScan.h>
 #include "NimBLEDevice.h"
+#include "list.h"
 
 // states
 #define STATE_STORE_READY 0x1
@@ -735,17 +736,20 @@ void showSysInfo()
 
 class MyAdvertisedDeviceCallbacks: public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
-      Serial.printf("Advertised Device: %s \n", advertisedDevice->toString().c_str());
-      Serial.printf("%s @ %i", advertisedDevice->getAddress().toString().c_str(), advertisedDevice->getRSSI());
+        string address = advertisedDevice->getAddress().toString().c_str();
+        int rssi = advertisedDevice->getRSSI();
+        beaconList.add(Beacon(address, rssi);
     }
 };
 
 BLEScan* pBLEScan;
+BeaconList beaconList;
 
 void processBleBeacons() {
     if(pBLEScan->isScanning() == false) {
         pBLEScan->start(0, nullptr, false);
     }
+    store.log(PID_BLE, beaconList.toCsvString().c_str());
 }
 
 void initBleBeacons() {
@@ -755,7 +759,9 @@ void initBleBeacons() {
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(37);
-    pBLEScan->setMaxResults(0);       
+    pBLEScan->setMaxResults(0);     
+
+    beaconList = BeaconList(5);  
 }
 
 void setup()
