@@ -39,3 +39,20 @@ void BeaconList::add(Beacon b) {
         this->beacons.erase(this->beacons.begin());
     }
 }
+
+string BeaconList::toCsvString() {
+    string res = "";
+    for (int i = this->size() - 1; i >= 0; i--)
+    {
+        res += this->get(i).address;
+        res += ",";
+        res += std::to_string(this->get(i).rssi);
+        res += ",";
+    }
+    if (res == "") {
+        return "empty";
+    } else {
+        res.pop_back();
+        return res;
+    }        
+}

@@ -49,6 +49,13 @@ public:
         write(buf, len);
         m_dataCount++;
     }
+    virtual void log(uint16_t pid, char value[])
+    {
+        char buf[sizeof(value) + 10];
+        byte len = sprintf(buf, "%X,%s", pid, value);
+        write(buf, len);
+        m_dataCount++;
+    }
     virtual void logFloat(uint16_t pid, float value)
     {
         char buf[32];

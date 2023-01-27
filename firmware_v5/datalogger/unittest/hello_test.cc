@@ -55,3 +55,33 @@ TEST(BeaconList, ShouldUpdate) {
   EXPECT_EQ(bl.size(), 1);
   EXPECT_EQ(bl.get(0), two);
 }
+
+TEST(BeaconList, ShouldPrintCsv) {
+  BeaconList bl = BeaconList(5);
+  Beacon one = Beacon("1A:2B:3C", -50);
+  Beacon two = Beacon("1A:2B:4F", -30);
+  Beacon three = Beacon("1A:2B:66", -60);
+  bl.add(one);
+  bl.add(two);
+  bl.add(three);
+
+  string expected = "1A:2B:4F,-30,1A:2B:3C,-50,1A:2B:66,-60";
+  EXPECT_EQ(bl.toCsvString(), expected);
+}
+
+TEST(BeaconList, ShouldNotOverGrow) {
+  BeaconList bl = BeaconList(3);
+  Beacon one = Beacon("1A:2B:3C", -50);
+  Beacon two = Beacon("1A:2B:4F", -30);
+  Beacon three = Beacon("1A:2B:66", -60);
+  Beacon four = Beacon("1A:2B:66:99", -40);
+  bl.add(one);
+  bl.add(two);
+  bl.add(three);
+  bl.add(four);
+
+  EXPECT_EQ(bl.size(), 3);
+  EXPECT_EQ(bl.get(0), one);
+  EXPECT_EQ(bl.get(1), four);
+  EXPECT_EQ(bl.get(2), two);
+}

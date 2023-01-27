@@ -4,6 +4,8 @@
 using std::string;
 using std::set;
 
+#define PID_BLE 0xAA
+
 class Beacon {
     public:
         Beacon();
@@ -23,7 +25,8 @@ class BeaconList {
         BeaconList(int maxSize);
         Beacon get(int pos);
         void add(Beacon b);
-        int size();        
+        int size();
+        string toCsvString();        
     private:
         int maxSize;
         set<Beacon> beacons;
