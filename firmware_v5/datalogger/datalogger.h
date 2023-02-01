@@ -49,9 +49,9 @@ public:
         write(buf, len);
         m_dataCount++;
     }
-    virtual void log(uint16_t pid, char value[])
+    virtual void log(uint16_t pid, const char* value)
     {
-        char buf[sizeof(value) + 10];
+        char buf[strlen(value) + 10];
         byte len = sprintf(buf, "%X,%s", pid, value);
         write(buf, len);
         m_dataCount++;
@@ -124,7 +124,17 @@ public:
     int begin()
     {
         SPI.begin();
-        if (SD.begin(PIN_SD_CS, SPI, SPI_FREQ)) {
+
+        bool sdReady = false;
+        sdReady = SD.begin(PIN_SD_CS, SPI, SPI_FREQ);
+
+        while (!sdReady)
+        {
+            delay(1000);
+            sdReady = SD.begin(PIN_SD_CS, SPI, SPI_FREQ);            
+        }
+
+        if (sdReady) {
             return SD.cardSize() >> 20;
         } else {
             return -1;

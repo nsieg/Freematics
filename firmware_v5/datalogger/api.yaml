@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: Freematics datalogger
+  description: Freematics datalogger API
+  version: 1.0.0
+tags:
+  - name: api
+paths:
+  /api/list:
+    get:
+      tags:
+        - api
+      summary: List log files
+      operationId: listLogFiles
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+  /api/live:
+    get:
+      tags:
+        - api
+      responses:
+        '200':
+          description: Successful operation
+  /api/info:
+    get:
+      tags:
+        - api
+      responses:
+        '200':
+          description: Successful operation 
+  /api/data:
+    get:
+      tags:
+        - api
+      responses:
+        '200':
+          description: Successful operation
+  /api/log:
+    description: Get active log file
+    get:
+      tags:
+        - api
+      responses:
+        '200':
+          description: Successful
+  /api/log/{id}:
+    description: Get log file with id
+    get:
+      tags:
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Successful operation      
+  /api/delete:
+    description: Delete active log file
+    get:
+      tags:
+        - api
+      responses:
+        '200':
+          description: Successful
+  /api/delete/{id}:
+    description: Delete log file with id
+    get:
+      tags:
+        - api
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+components:
+  schemas:
+    Log:
+      type: object
+      required: [ "id", "size"]
+      properties:
+        id:
+          type: integer
+          format: uint32
+          example: 10
+        size:
+          type: integer
+          format: uint32
+          example: 3456
+          description: size in bytes
+        active:
+          type: boolean
+          example: true
+   

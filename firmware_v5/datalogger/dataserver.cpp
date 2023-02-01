@@ -249,22 +249,28 @@ int handlerLogList(UrlHandlerParam* param)
     if (root) {
         while(file = root.openNextFile()) {
             const char *fn = file.name();
-            if (!strncmp(fn, "/DATA/", 6)) {
-                fn += 6;
-                unsigned int size = file.size();
-                Serial.print(fn);
-                Serial.print(' ');
-                Serial.print(size);
-                Serial.println(" bytes");
-                unsigned int id = atoi(fn);
-                if (id) {
-                    n += snprintf(buf + n, bufsize - n, "{\"id\":%u,\"size\":%u",
-                        id, size);
-                    if (id == fileid) {
-                        n += snprintf(buf + n, bufsize - n, ",\"active\":true");
-                    }
-                    n += snprintf(buf + n, bufsize - n, "},");
+
+            char suffix[] = ".CSV";
+            int idxEnd = strlen(fn) - strlen(suffix);  
+            char idbuf[24];
+            strncpy(idbuf, fn, idxEnd);
+            unsigned int id = atoi(idbuf);
+            unsigned int size = file.size();
+            Serial.print("[");
+            Serial.print(id);
+            Serial.print("] from ");
+            Serial.print(fn);
+            Serial.print(" with ");
+            Serial.print(size);
+            Serial.println(" bytes");
+            
+            if (id) {
+                n += snprintf(buf + n, bufsize - n, "{\"id\":%u,\"size\":%u",
+                    id, size);
+                if (id == fileid) {
+                    n += snprintf(buf + n, bufsize - n, ",\"active\":true");
                 }
+                n += snprintf(buf + n, bufsize - n, "},");
             }
         }
         if (buf[n - 1] == ',') n--;

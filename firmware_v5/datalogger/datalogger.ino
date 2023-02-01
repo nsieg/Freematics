@@ -734,16 +734,16 @@ void showSysInfo()
   Serial.println();
 }
 
+BLEScan* pBLEScan;
+BeaconList beaconList = BeaconList(5);
+
 class MyAdvertisedDeviceCallbacks: public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
         string address = advertisedDevice->getAddress().toString().c_str();
         int rssi = advertisedDevice->getRSSI();
-        beaconList.add(Beacon(address, rssi);
+        beaconList.add(Beacon(address, rssi));
     }
 };
-
-BLEScan* pBLEScan;
-BeaconList beaconList;
 
 void processBleBeacons() {
     if(pBLEScan->isScanning() == false) {
@@ -760,8 +760,6 @@ void initBleBeacons() {
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(37);
     pBLEScan->setMaxResults(0);     
-
-    beaconList = BeaconList(5);  
 }
 
 void setup()
@@ -788,7 +786,7 @@ void setup()
         obd.begin(sys.link);
     }
 #else
-    sys.begin(false, USE_GNSS >= 3);
+    sys.begin(true, USE_GNSS >= 3);
 #endif
 
     //initMesh();
