@@ -85,3 +85,17 @@ TEST(BeaconList, ShouldNotOverGrow) {
   EXPECT_EQ(bl.get(1), four);
   EXPECT_EQ(bl.get(2), two);
 }
+
+TEST(StringProcessing, ShouldCut) {
+  char one[] = "hello.CSV";
+  char expected[] = "hello";
+
+  char suffix[] = ".CSV";
+  int idxEnd = strlen(one) - strlen(suffix);
+  
+  char buf[24];
+  strncpy(buf, one, idxEnd);
+  std::cout << buf;
+
+  EXPECT_FALSE(strcmp(buf, expected));
+}
