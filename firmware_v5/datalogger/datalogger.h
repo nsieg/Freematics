@@ -171,6 +171,19 @@ public:
             Serial.println("File error");
         }
     }
+
+    void incrementId() {
+        m_file.close();
+        m_id++;
+        char path[24];
+        sprintf(path, "/DATA/%u.CSV", m_id);
+        
+        m_file = SD.open(path, FILE_APPEND);
+        if (!m_file) {
+            Serial.println("File error");
+        }
+    }
+
     void write(const char* buf, byte len)
     {
         if (m_next) m_next->write(buf, len);

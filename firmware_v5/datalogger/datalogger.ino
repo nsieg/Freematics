@@ -18,7 +18,7 @@
 #include <FS.h>
 #include <SD.h>
 #include <SPIFFS.h>
-#include <httpd.h>
+//#include <httpd.h>
 #include <FreematicsPlus.h>
 #include "datalogger.h"
 #include "config.h"
@@ -26,6 +26,10 @@
 //#include <BLEScan.h>
 #include "NimBLEDevice.h"
 #include "list.h"
+//#include "ESPAsyncTCP.h"
+#include "ESPAsyncWebServer.h"
+
+AsyncWebServer server(80);
 
 // states
 #define STATE_STORE_READY 0x1
@@ -137,50 +141,10 @@ void calibrateMEMS()
     Serial.println(accBias[2]);
 }
 #endif
-
+/*
 int handlerLiveData(UrlHandlerParam* param)
-{
-    char *buf = param->pucBuffer;
-    int bufsize = param->bufSize;
-    int n = snprintf(buf, bufsize, "{\"obd\":{\"vin\":\"%s\",\"battery\":%d,\"pid\":[", vin, (int)batteryVoltage);
-    uint32_t t = millis();
-    for (int i = 0; i < sizeof(obdData) / sizeof(obdData[0]); i++) {
-        n += snprintf(buf + n, bufsize - n, "{\"pid\":%u,\"value\":%d,\"age\":%u},",
-            0x100 | obdData[i].pid, obdData[i].value, t - obdData[i].ts);
-    }
-    n--;
-    n += snprintf(buf + n, bufsize - n, "]}");
-#if USE_MEMS
-    n += snprintf(buf + n, bufsize - n, ",\"mems\":{\"acc\":[%d,%d,%d]",
-        (int)((acc[0] - accBias[0]) * 100), (int)((acc[1] - accBias[1]) * 100), (int)((acc[2] - accBias[2]) * 100));
-#if USE_MEMS == MEMS_9DOF || USE_MEMS == MEMS_DMP
-    n += snprintf(buf + n, bufsize - n, ",\"gyro\":[%d,%d,%d]",
-        (int)(gyr[0] * 100), (int)(gyr[1] * 100), (int)(gyr[2] * 100));
-#endif
-#if USE_MEMS == MEMS_9DOF
-    n += snprintf(buf + n, bufsize - n, ",\"mag\":[%d,%d,%d]",
-        (int)(mag[0] * 10000), (int)(mag[1] * 10000), (int)(mag[2] * 10000));
-#endif
-#if ENABLE_ORIENTATION
-    n += snprintf(buf + n, bufsize - n, ",\"orientation\":{\"pitch\":\"%f\",\"roll\":\"%f\",\"yaw\":\"%f\"}",
-        ori.pitch, ori.roll, ori.yaw);
-#endif
-    buf[n++] = '}';
-#endif
-#if USE_GNSS
-    if (lastGPStime){
-        n += snprintf(buf + n, bufsize - n, ",\"gps\":{\"date\":%u,\"time\":%u,\"lat\":%f,\"lng\":%f,\"alt\":%f,\"speed\":%f,\"sat\":%u,\"sentences\":%u,\"errors\":%u}",
-            gd->date, gd->time, gd->lat, gd->lng, gd->alt, gd->speed, gd->sat,
-            gd->sentences, gd->errors);
-    } else {
-        n += snprintf(buf + n, bufsize - n, ",\"gps\":{\"ready\":\"no\"}");
-    }
-#endif
-    buf[n++] = '}';
-    param->contentLength = n;
-    param->contentType=HTTPFILETYPE_JSON;
-    return FLAG_DATA_RAW;
-}
+// Removed
+*/
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels)
 {
@@ -233,37 +197,11 @@ public:
             }
         }
 #elif USE_GNSS >= 3
-      if (!checkState(STATE_GPS_FOUND)) {
-        Serial.print("CELL GNSS:");
-        if (cellInit()) {
-          Serial.println("OK");
-          if (!gd) gd = new GPS_DATA;
-          memset(gd, 0, sizeof(GPS_DATA));
-          setState(STATE_CELL_GPS_FOUND);
-        } else {
-          Serial.println("NO");
-        }
-      }
+// Removed
 #endif
 
 #if USE_OBD
-        Serial.print("OBD:");
-        if (obd.init()) {
-            Serial.println("OK");
-            pidErrors = 0;
-            // retrieve VIN
-            Serial.print("VIN:");
-            char buffer[128];
-            if (obd.getVIN(buffer, sizeof(buffer))) {
-                Serial.println(buffer);
-                strncpy(vin, buffer, sizeof(vin) - 1);
-            } else {
-                Serial.println("NO");
-            }
-            setState(STATE_OBD_READY);
-        } else {
-            Serial.println("NO");
-        }
+// Removed
 #endif
         startTime = millis();
     }
@@ -335,18 +273,7 @@ public:
         }
     }
 #elif USE_GNSS >= 3
-    void processCellGPS()
-    {
-        /*
-        char buf[320];
-        if (cellRead(buf, sizeof(buf)) > 0) {
-            Serial.print(buf);
-        }
-        */
-        if (cellGetGPSInfo(gd)) {
-            logLocationData(gd);
-        }
-    }
+// Removed
 #endif
     void standby()
     {
@@ -405,172 +332,7 @@ public:
         clearState(STATE_STANDBY);
     }
 #if USE_GNSS >= 3
-    bool cellSendCommand(const char* cmd, char* buf, int bufsize, const char* expected = "\r\nOK", unsigned int timeout = 1000)
-    {
-        if (cmd) sys.xbWrite(cmd);
-        memset(buf, 0, bufsize);
-        return sys.xbReceive(buf, bufsize, timeout, &expected, 1) != 0;
-    }
-#if USE_GNSS == 4
-    bool cellInit()
-    {
-        char buf[320];
-        bool success = false;
-        for (byte n = 0; n < 5; n++) {
-            if (!cellSendCommand("ATZ\r", buf, sizeof(buf))) {
-                sys.xbTogglePower();
-                cellSendCommand("AT\r", buf, sizeof(buf), "+CFUN:", 3000);
-            }
-            cellSendCommand("ATE0\r", buf, sizeof(buf));
-            if (cellSendCommand("ATI\r", buf, sizeof(buf))) {
-                Serial.println(buf);
-                //cellSendCommand("AT+SGNSCFG=\"NMEAOUTPORT\",2,115200\r", buf, sizeof(buf));
-                //Serial.println(buf);
-                cellSendCommand("AT+CGNSPWR=1\r", buf, sizeof(buf));
-                Serial.println(buf);
-                cellSendCommand("AT+CGNSMOD=1,1,0,0,0\r", buf, sizeof(buf));
-                Serial.println(buf);
-                if (cellSendCommand("AT+CGNSINF\r", buf, sizeof(buf), "+CGNSINF:")) {
-                    Serial.println(buf);
-                    success = true;
-                    break;
-                }
-                Serial.println(buf);
-            }
-        }
-        return success;
-        
-    }
-    void cellUninit()
-    {
-        char buf[32];
-        cellSendCommand("AT+CGNSPWR=0\r", buf, sizeof(buf));
-    }
-    bool cellGetGPSInfo(GPS_DATA* gd)
-    {
-      char *p;
-      char buf[160];
-      if (cellSendCommand("AT+CGNSINF\r", buf, sizeof(buf), "+CGNSINF:")) do {
-        //Serial.print(buf);
-        if (!(p = strchr(buf, ':'))) break;
-        p += 2;
-        if (strncmp(p, "1,1,", 4)) break;
-        p += 4;
-        gd->time = atol(p + 8);
-        *(p + 8) = 0;
-        gd->date = atol(p);
-        if (!(p = strchr(p + 9, ','))) break;
-        gd->lat = atof(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->lng = atof(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->alt = atof(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->speed = atof(++p) * 1000 / 1852;
-        if (!(p = strchr(p, ','))) break;
-        gd->heading = atoi(++p);
-        Serial.print("UTC:");
-        Serial.print(gd->date);
-        Serial.print(' ');
-        Serial.print(gd->time);
-        Serial.print(" LAT:");
-        Serial.print(gd->lat, 6);
-        Serial.print(" LNG:");
-        Serial.println(gd->lng, 6);
-        return true;
-      } while (0);
-      return false;
-    }
-#else
-    bool cellInit()
-    {
-        char buf[320];
-        bool success = false;
-        for (byte n = 0; n < 3 && !success; n++) {
-            // try turning on module
-            sys.xbTogglePower();
-            // discard any stale data
-            sys.xbPurge();
-            delay(3000);
-            for (byte m = 0; m < 5; m++) {
-                if (cellSendCommand("AT\r", buf, sizeof(buf)) && cellSendCommand("ATE0\r", buf, sizeof(buf)) && cellSendCommand("ATI\r", buf, sizeof(buf))) {
-                    // retrieve module info
-                    Serial.print(buf);
-                    cellSendCommand("AT+CGPS=1,1\r", buf, sizeof(buf));
-                    success = true;
-                    break;
-                }
-            }
-        }
-        cellSendCommand("AT+CGPSNMEARATE=10\r", buf, sizeof(buf));
-        return success;
-    }
-    void cellUninit()
-    {
-        char buf[32];
-        cellSendCommand("AT+CPOF\r", buf, sizeof(buf));
-    }
-    long parseDegree(const char* s)
-    {
-      char *p;
-      unsigned long left = atol(s);
-      unsigned long tenk_minutes = (left % 100UL) * 100000UL;
-      if ((p = strchr(s, '.')))
-      {
-        unsigned long mult = 10000;
-        while (isdigit(*++p))
-        {
-          tenk_minutes += mult * (*p - '0');
-          mult /= 10;
-        }
-      }
-      return (left / 100) * 1000000 + tenk_minutes / 6;
-    }
-    int cellRead(char* buf, int bufsize)
-    {
-        int n = sys.xbRead(buf, bufsize - 1, 50);
-        if (n >= 0) buf[n] = 0;
-        return n;
-    }
-    bool cellGetGPSInfo(GPS_DATA* gd)
-    {
-      char *p;
-      char buf[160];
-      cellSendCommand("AT+CGPSINFOCFG=1,31\r", buf, sizeof(buf));
-      if (cellSendCommand("AT+CGPSINFO\r", buf, sizeof(buf), "+CGPSINFO:")) do {
-        Serial.print(buf);
-        if (!(p = strchr(buf, ':'))) break;
-        if (*(++p) == ',') break;
-        gd->lat = parseDegree(p);
-        if (!(p = strchr(p, ','))) break;
-        if (*(++p) == 'S') gd->lat = -gd->lat;
-        if (!(p = strchr(p, ','))) break;
-        gd->lng = parseDegree(++p);
-        if (!(p = strchr(p, ','))) break;
-        if (*(++p) == 'W') gd->lng = -gd->lng;
-        if (!(p = strchr(p, ','))) break;
-        gd->date = atol(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->time = atol(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->alt = atoi(++p);
-        if (!(p = strchr(p, ','))) break;
-        gd->speed = atof(++p) * 100;
-        if (!(p = strchr(p, ','))) break;
-        gd->heading = atoi(++p);
-        Serial.print("UTC:");
-        Serial.print(gd->date);
-        Serial.print(' ');
-        Serial.print(gd->time);
-        Serial.print(" LAT:");
-        Serial.print(gd->lat);
-        Serial.print(" LNG:");
-        Serial.println(gd->lng);
-        return true;
-      } while (0);
-      return false;
-    }
-#endif
+// Removed
 #endif
     bool checkState(byte flags) { return (m_state & flags) == flags; }
     void setState(byte flags) { m_state |= flags; }
@@ -601,11 +363,17 @@ void showStats()
         Serial.print(" | ");
         Serial.print(fileSize);
         Serial.print(" bytes");
+
+        uint8_t fileTooBig = fileSize >> 21; // fileSize / 2M
+        if (fileTooBig) {
+            store.incrementId();
+        }
+
         static uint8_t lastFlushCount = 0;
-        uint8_t flushCount = fileSize >> 12;
+        uint8_t flushCount = fileSize >> 12; // fileSize / 4K
         if (flushCount != lastFlushCount) {
             store.flush();
-            lastFlushCount = flushCount;
+            lastFlushCount = flushCount; 
             Serial.print(" (flushed)");
         }
     }
@@ -615,102 +383,7 @@ void showStats()
 void processBLE(int timeout)
 {
 #if ENABLE_BLE
-    static byte echo = 1;
-    char* cmd;
-    if (!(cmd = ble_recv_command(timeout))) {
-        return;
-    }
-
-    char *p = strchr(cmd, '\r');
-    if (p) *p = 0;
-    char buf[48];
-    int bufsize = sizeof(buf);
-    int n = 0;
-    if (echo) {
-        n = snprintf(buf, bufsize, "%s\r", cmd);
-    }
-
-    Serial.print("[BLE] ");
-    Serial.print(cmd);
-    if (!strcmp(cmd, "UPTIME") || !strcmp(cmd, "TICK")) {
-        n += snprintf(buf + n, bufsize - n, "%u", millis());
-    } else if (!strcmp(cmd, "BATT")) {
-        n += snprintf(buf + n, bufsize - n, "%.2f", (float)(analogRead(A0) * 42) / 4095);
-    } else if (!strcmp(cmd, "RESET")) {
-        store.close();
-        ESP.restart();
-        // never reach here
-    } else if (!strcmp(cmd, "OFF")) {
-        logger.setState(STATE_STANDBY);
-        n += snprintf(buf + n, bufsize - n, "OK");
-    } else if (!strcmp(cmd, "ON")) {
-        logger.clearState(STATE_STANDBY);
-        n += snprintf(buf + n, bufsize - n, "OK");
-    } else if (!strcmp(cmd, "ON?")) {
-        n += snprintf(buf + n, bufsize - n, "%u", logger.checkState(STATE_STANDBY) ? 0 : 1);
-#if USE_MEMS
-    } else if (!strcmp(cmd, "TEMP")) {
-        n += snprintf(buf + n, bufsize - n, "%d", (int)temp);
-    } else if (!strcmp(cmd, "ACC")) {
-        n += snprintf(buf + n, bufsize - n, "%.1f/%.1f/%.1f", acc[0], acc[1], acc[2]);
-    } else if (!strcmp(cmd, "GYRO")) {
-        n += snprintf(buf + n, bufsize - n, "%.1f/%.1f/%.1f", gyr[0], gyr[1], gyr[2]);
-    } else if (!strcmp(cmd, "GF")) {
-        n += snprintf(buf + n, bufsize - n, "%f", (float)sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2]));
-#endif
-    } else if (!strcmp(cmd, "ATE0")) {
-        echo = 0;
-        n += snprintf(buf + n, bufsize - n, "OK");
-    } else if (!strcmp(cmd, "ATE1")) {
-        echo = 1;
-        n += snprintf(buf + n, bufsize - n, "OK");
-    } else if (!strcmp(cmd, "FS")) {
-        n += snprintf(buf + n, bufsize - n, "%u", store.size());
-    } else if (!memcmp(cmd, "01", 2)) {
-        byte pid = hex2uint8(cmd + 2); 
-        for (byte i = 0; i < sizeof(obdData) / sizeof(obdData[0]); i++) {
-            if (obdData[i].pid == pid) {
-                n += snprintf(buf + n, bufsize - n, "%d", obdData[i].value);
-                pid = 0;
-                break;
-            }
-        }
-        if (pid) {
-            int value;
-            if (obd.readPID(pid, value)) {
-                n += snprintf(buf + n, bufsize - n, "%d", value);
-            } else {
-                n += snprintf(buf + n, bufsize - n, "N/A");
-            }
-        }
-    } else if (!strcmp(cmd, "VIN")) {
-        ble_send_response(buf, n, 0);
-        n = 0;
-        n += snprintf(buf + n, bufsize - n, "%s", vin[0] ? vin : "N/A");
-    } else if (!strcmp(cmd, "LAT") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%f", gd->lat);
-    } else if (!strcmp(cmd, "LNG") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%f", gd->lng);
-    } else if (!strcmp(cmd, "ALT") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%d", (int)gd->alt);
-    } else if (!strcmp(cmd, "SAT") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%u", (unsigned int)gd->sat);
-    } else if (!strcmp(cmd, "SPD") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%d", (int)(gd->speed * 1852 / 1000));
-    } else if (!strcmp(cmd, "CRS") && gd) {
-        n += snprintf(buf + n, bufsize - n, "%u", (unsigned int)gd->heading);
-    } else {
-        n += snprintf(buf + n, bufsize - n, "ERROR");
-    }
-    Serial.print(" -> ");
-    Serial.println((p = strchr(buf, '\r')) ? p + 1 : buf);
-    if (n < bufsize - 1) {
-        buf[n++] = '\r';
-    } else {
-        n = bufsize - 1;
-    }
-    buf[n] = 0;
-    ble_send_response(buf, n, cmd);
+// Removed
 #else
     if (timeout) delay(timeout);
 #endif
@@ -769,6 +442,8 @@ void setup()
     Serial.begin(115200);
     showSysInfo(); 
 
+    
+
 #ifdef PIN_LED
     // init LED pin
     pinMode(PIN_LED, OUTPUT);
@@ -780,11 +455,7 @@ void setup()
 #endif
 
 #if USE_OBD
-    if (sys.begin(true, USE_GNSS >= 3)) {
-        Serial.print("TYPE:");
-        Serial.println(sys.devType);
-        obd.begin(sys.link);
-    }
+// Removed
 #else
     sys.begin(true, USE_GNSS >= 3);
 #endif
@@ -846,18 +517,30 @@ void setup()
 
 #if ENABLE_WIFI_STATION || ENABLE_WIFI_AP
 #if ENABLE_HTTPD
-    Serial.print("HTTP Server...");
-    if (serverSetup()) {
-      Serial.println("OK");
-    } else {
-      Serial.println("NO");
-    }
+// Removed
 #endif
     serverCheckup();
 #if ENABLE_NMEA_SERVER
     nmeaServer.begin();
 #endif
 #endif
+
+server.serveStatic("/fs", SD, "/DATA");
+
+server.on("^\\/del\\/([0-9]+)$", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String id = request->pathArg(0);
+    Serial.print("Deletion of ");
+    Serial.print(id);
+    Serial.println(" requested!");
+    bool removal = SD.remove("/DATA/"+id+".CSV");
+    if (removal) {
+        request->send(200);
+    } else {
+        request->send(500);
+    }    
+});
+
+server.begin();
 
 #ifdef PIN_LED
     pinMode(PIN_LED, LOW);
@@ -871,17 +554,7 @@ void setup()
 void loop()
 {
 #if USE_OBD
-    if (!logger.checkState(STATE_OBD_READY) || logger.checkState(STATE_STANDBY)) {
-        logger.standby();
-        Serial.print("OBD:");
-        if (!obd.init()) {
-            Serial.println("NO");
-            return;
-        }
-        logger.setState(STATE_OBD_READY);
-        Serial.println("OK");
-        startTime = millis();
-    }
+// Removed
 #endif
 
     // if file not opened, create a new file
@@ -907,36 +580,7 @@ void loop()
     // poll and log OBD data
     store.setTimestamp(ts);
 #if USE_OBD
-    static int idx[2] = {0, 0};
-    int tier = 1;
-    for (byte i = 0; i < sizeof(obdData) / sizeof(obdData[0]); i++) {
-        if (obdData[i].tier > tier) {
-            // reset previous tier index
-            idx[tier - 2] = 0;
-            // keep new tier number
-            tier = obdData[i].tier;
-            // move up current tier index
-            i += idx[tier - 2]++;
-            // check if into next tier
-            if (obdData[i].tier != tier) {
-                idx[tier - 2]= 0;
-                i--;
-                continue;
-            }
-        }
-        byte pid = obdData[i].pid;
-        if (!obd.isValidPID(pid)) continue;
-        if (obd.readPID(pid, obdData[i].value)) {
-            obdData[i].ts = millis();
-            store.log((uint16_t)pid | 0x100, obdData[i].value);
-        } else {
-            pidErrors++;
-            Serial.print("PID ");
-            Serial.print((int)pid | 0x100, HEX);
-            Serial.print(" Error #");
-            Serial.println(pidErrors);
-            break;
-        }
+// Removed
 #if USE_GNSS == 1 || USE_GNSS == 2
         if (logger.checkState(STATE_GPS_FOUND)) {
             logger.processGPSData();
@@ -974,15 +618,7 @@ void loop()
 #endif
 
 #if USE_OBD
-    if (logger.checkState(STATE_OBD_READY)) {
-        // log battery voltage (from voltmeter), data in 0.01v
-        batteryVoltage = obd.getVoltage() * 100;
-        store.log(PID_BATTERY_VOLTAGE, batteryVoltage);
-    }
-    if (obd.errors >= 3) {
-        logger.clearState(STATE_OBD_READY);
-        return;
-    }
+// Removed
 #endif
 
 #if !ENABLE_SERIAL_OUT
@@ -1000,22 +636,7 @@ void loop()
 #endif
 
 #if ENABLE_NMEA_SERVER
-    // NMEA-to-TCP bridge
-    if (!nmeaClient || !nmeaClient.connected()) {
-        nmeaClient.stop();
-        nmeaClient = nmeaServer.available();
-    }
-    do {
-        if (nmeaClient.connected()) {
-            char buf[256];
-            int bytes = sys.gpsGetNMEA(buf, sizeof(buf));
-            if (bytes > 0) nmeaClient.write(buf, bytes);
-            bytes = 0;
-            while (nmeaClient.available() && bytes < sizeof(buf)) {
-                buf[bytes++] = nmeaClient.read();
-            }
-            if (bytes > 0) sys.gpsSendCommand(buf, bytes);
-        }
+// Removed
 #if ENABLE_HTTPD
         serverProcess(1);
 #else
