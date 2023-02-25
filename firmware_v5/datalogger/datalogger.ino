@@ -361,20 +361,24 @@ void showStats()
     uint32_t fileSize = store.size();
     if (fileSize > 0) {
         Serial.print(" | ");
+        Serial.print(fileid);
+        Serial.print(".CSV | ");
         Serial.print(fileSize);
         Serial.print(" bytes");
 
         uint8_t fileTooBig = fileSize >> 21; // fileSize / 2M
         if (fileTooBig) {
-            store.incrementId();
-        }
-
-        static uint8_t lastFlushCount = 0;
-        uint8_t flushCount = fileSize >> 12; // fileSize / 4K
-        if (flushCount != lastFlushCount) {
-            store.flush();
-            lastFlushCount = flushCount; 
-            Serial.print(" (flushed)");
+            uint32_t newId = store.incrementId();
+            fileid = newId;
+            Serial.print(" (new file)");
+        } else {
+            static uint8_t lastFlushCount = 0;
+            uint8_t flushCount = fileSize >> 12; // fileSize / 4K
+            if (flushCount != lastFlushCount) {
+                store.flush();
+                lastFlushCount = flushCount; 
+                Serial.print(" (flushed)");
+            }
         }
     }
     Serial.println();
@@ -433,6 +437,15 @@ void initBleBeacons() {
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(37);
     pBLEScan->setMaxResults(0);     
+}
+
+unsigned int idFromFileName(string name) {
+    char suffix[] = ".CSV";
+    int idxEnd = strlen(name) - strlen(suffix);  
+    char idbuf[24];
+    strncpy(idbuf, name, idxEnd);
+    unsigned int id = atoi(idbuf);
+    return id;
 }
 
 void setup()
@@ -527,17 +540,51 @@ void setup()
 
 server.serveStatic("/fs", SD, "/DATA");
 
-server.on("^\\/del\\/([0-9]+)$", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String id = request->pathArg(0);
-    Serial.print("Deletion of ");
-    Serial.print(id);
-    Serial.println(" requested!");
-    bool removal = SD.remove("/DATA/"+id+".CSV");
+server.on("^\\/delete\\/(.+)$", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String fileName = request->pathArg(0);
+    Serial.println("Deletion of " + fileName + " requested!");
     if (removal) {
         request->send(200);
     } else {
         request->send(500);
     }    
+});
+
+server.on("^\\/list$", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    fs::File root = SD.open("/DATA");
+    
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response.setCode(200);
+    response->print("[");
+
+    fs::File file = root.openNextFile();
+    bool firstElement = true;
+    while(file) {
+        if(file.isDirectory()){
+            continue
+        }
+
+        unsigned int id = idFromFileName(file.name());
+        
+        if(!firstElement) {
+            response->print(",");
+        }
+        firstElement = false;
+        response->print("{");
+        response->printf("\"name\":\"%s\",", file.name());
+        
+        if (id == fileid) {
+           response->print("\"active\":\"true\","); 
+        }
+
+        response->printf("\"size\":\"%u\"", file.size());
+        response->print("}");
+
+        file = root.openNextFile();
+    }
+
+    response->print("]");
+    request->send(response);  
 });
 
 server.begin();
@@ -628,7 +675,7 @@ void loop()
     processBleBeacons();
 
 #if ENABLE_HTTPD
-    serverProcess(0);
+// Removed
 #endif
 
 #if ENABLE_WIFI_AP || ENABLE_WIFI_STATION
@@ -638,7 +685,7 @@ void loop()
 #if ENABLE_NMEA_SERVER
 // Removed
 #if ENABLE_HTTPD
-        serverProcess(1);
+// Removed
 #else
         delay(1);
 #endif
@@ -646,11 +693,11 @@ void loop()
 #else
     ts = millis() - ts;
 #if ENABLE_HTTPD
-    serverProcess(ts < MIN_LOOP_TIME ? (MIN_LOOP_TIME - ts) : 0);
+// Removed
 #else
     if (ts < MIN_LOOP_TIME) delay(MIN_LOOP_TIME - ts);
 #endif
 #endif
 
-    processBLE(0);
+//processBLE(0);
 }

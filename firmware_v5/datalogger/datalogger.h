@@ -172,7 +172,7 @@ public:
         }
     }
 
-    void incrementId() {
+    uint32_t incrementId() {
         m_file.close();
         m_id++;
         char path[24];
@@ -182,6 +182,7 @@ public:
         if (!m_file) {
             Serial.println("File error");
         }
+        return m_id;
     }
 
     void write(const char* buf, byte len)

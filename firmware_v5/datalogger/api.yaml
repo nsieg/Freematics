@@ -4,8 +4,54 @@ info:
   description: Freematics datalogger API
   version: 1.0.0
 tags:
+  - name: nils
   - name: api
 paths:
+  /fs/{filename}:
+    get:
+      tags:
+        - nils
+      summary: Download file by name
+      operationId: getFileByName
+      responses:
+        '200':
+          description: csv file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /list:
+    get:
+      tags:
+        - nils
+      summary: List files
+      operationId: listFiles
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+  /delete/{filename}:
+    description: Delete file by name
+    get:
+      tags:
+        - nils
+      summary: Delete file by name
+      operationId: delFileByName
+      parameters:
+        - in: path
+          name: filename
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Successful operation
   /api/list:
     get:
       tags:
@@ -96,6 +142,21 @@ components:
           type: integer
           format: uint32
           example: 10
+        size:
+          type: integer
+          format: uint32
+          example: 3456
+          description: size in bytes
+        active:
+          type: boolean
+          example: true
+    File:
+      type: object
+      required: [ "size", "name"]
+      properties:
+        name:
+          type: string
+          example: 10.CSV
         size:
           type: integer
           format: uint32
