@@ -14,7 +14,7 @@
 **************************************/
 #ifndef HAVE_CONFIG
 // enable(1)/disable(0) serial data output
-#define ENABLE_SERIAL_OUT 0
+#define ENABLE_SERIAL_OUT CUSTOM_ENABLE_SERIAL_OUT
 // specify storage type
 #define STORAGE STORAGE_SD
 #endif
@@ -56,4 +56,4 @@
 // motion detection
 #define WAKEUP_MOTION_THRESHOLD 0.03 /* G */
 // minimum loop time
-#define MIN_LOOP_TIME 100 /* ms */ 
+#define MIN_LOOP_TIME CUSTOM_MIN_LOOP_TIME /* ms */ 

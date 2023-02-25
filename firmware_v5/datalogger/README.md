@@ -1,3 +1,15 @@
+
+https://www.heise.de/ratgeber/Mikrocontroller-Programmierung-Fehler-in-Bibliothek-verhindert-das-Kompilieren-7520947.html
+
+C:\PlatformIO\Projects\Know\BTM/.pio/libdeps/esp32dev/ESP Async WebServer/src/WebAuthentication.cpp:74: undefined reference to `mbedtls_md5_starts' collect2.exe: error: ld returned 1 exit status
+
+Die schuldige Datei der Bibliothek heißt WebAuthentication.cpp und liegt auf Windows-PCs in Ihrem Dokumente-Ordner unter Arduino/Libraries/ESPAsyncWebServer-master/src. Zur Fehlerbehebung öffnen Sie die Datei in einem Texteditor, etwa Notepad++.
+
+Im Text suchen Sie dann die Zeile mbedtls_md5_starts(&_ctx);. Ändern Sie sie in mbedtls_md5_starts_ret(&_ctx);. Speichern nicht vergessen!
+
+
+---
+
 This Arduino sketch is designed for running on [Freematics ONE+](https://freematics.com/products/freematics-one-plus/) to collect vehicle telemetry data from OBD-II, GPS and motion sensor, store the collected data in Flash or microSD card and provide data access through WiFi and BLE.
 
 Data Collection

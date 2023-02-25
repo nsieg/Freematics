@@ -110,8 +110,11 @@ int handlerLogFile(UrlHandlerParam* param)
 {
     LogDataContext* ctx = (LogDataContext*)param->hs->ptr;
     param->contentType = HTTPFILETYPE_TEXT;
+    Serial.println("113");
     if (ctx) {
+        Serial.println("115");
 		if (!param->pucBuffer) {
+            Serial.println("117");
 			// connection to be closed, final calling, cleanup
 			ctx->file.close();
             delete ctx;
@@ -119,11 +122,14 @@ int handlerLogFile(UrlHandlerParam* param)
 			return 0;
 		}
     } else {
+        Serial.println("125");
         int id = 0;
         if (param->pucRequest[0] == '/') {
+            Serial.println("128");
             id = atoi(param->pucRequest + 1);
         }
         sprintf(param->pucBuffer, "/DATA/%u.CSV", id == 0 ? fileid : id);
+        Serial.println(param->pucBuffer);
         ctx = new LogDataContext;
 #if STORAGE == STORAGE_SPIFFS
         ctx->file = SPIFFS.open(param->pucBuffer, FILE_READ);
@@ -131,20 +137,25 @@ int handlerLogFile(UrlHandlerParam* param)
         ctx->file = SD.open(param->pucBuffer, FILE_READ);
 #endif
         if (!ctx->file) {
+            Serial.println("140");
             strcat(param->pucBuffer, " not found");
             param->contentLength = strlen(param->pucBuffer);
             delete ctx;
             return FLAG_DATA_RAW;
         }
+        Serial.println("146");
         param->hs->ptr = (void*)ctx;
     }
-
+Serial.println("149");
     if (!ctx->file.available()) {
         // EOF
+        Serial.println("152");
         return 0;
     }
     param->contentLength = ctx->file.readBytes(param->pucBuffer, param->bufSize);
     param->contentType = HTTPFILETYPE_TEXT;
+    Serial.println(ctx->file.name());
+    //Serial.println(param->pucBuffer);
     return FLAG_DATA_STREAM;
 }
 
@@ -249,22 +260,28 @@ int handlerLogList(UrlHandlerParam* param)
     if (root) {
         while(file = root.openNextFile()) {
             const char *fn = file.name();
-            if (!strncmp(fn, "/DATA/", 6)) {
-                fn += 6;
-                unsigned int size = file.size();
-                Serial.print(fn);
-                Serial.print(' ');
-                Serial.print(size);
-                Serial.println(" bytes");
-                unsigned int id = atoi(fn);
-                if (id) {
-                    n += snprintf(buf + n, bufsize - n, "{\"id\":%u,\"size\":%u",
-                        id, size);
-                    if (id == fileid) {
-                        n += snprintf(buf + n, bufsize - n, ",\"active\":true");
-                    }
-                    n += snprintf(buf + n, bufsize - n, "},");
+
+            char suffix[] = ".CSV";
+            int idxEnd = strlen(fn) - strlen(suffix);  
+            char idbuf[24];
+            strncpy(idbuf, fn, idxEnd);
+            unsigned int id = atoi(idbuf);
+            unsigned int size = file.size();
+            Serial.print("[");
+            Serial.print(id);
+            Serial.print("] from ");
+            Serial.print(fn);
+            Serial.print(" with ");
+            Serial.print(size);
+            Serial.println(" bytes");
+            
+            if (id) {
+                n += snprintf(buf + n, bufsize - n, "{\"id\":%u,\"size\":%u",
+                    id, size);
+                if (id == fileid) {
+                    n += snprintf(buf + n, bufsize - n, ",\"active\":true");
                 }
+                n += snprintf(buf + n, bufsize - n, "},");
             }
         }
         if (buf[n - 1] == ',') n--;
@@ -347,6 +364,9 @@ bool serverCheckup(int wifiJoinPeriod)
             Serial.print("Connecting to hotspot (SSID:");
             Serial.print(WIFI_SSID);
             Serial.println(')');
+#if WIFI_AP_STATIC
+            WiFi.config(WIFI_AP_STATIC_IP, WIFI_AP_STATIC_GATEWAY, WIFI_AP_STATIC_SUBNET);
+#endif          
             WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
             wifiStartTime = millis();
         }
