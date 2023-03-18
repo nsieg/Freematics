@@ -1,3 +1,6 @@
+#ifndef BEACON_H
+#define BEACON_H
+
 #include <string>
 #include <memory>
 #include <set>
@@ -31,3 +34,5 @@ class BeaconList {
         int maxSize;
         set<Beacon> beacons;
 };
+
+#endif

@@ -156,7 +156,7 @@ components:
       properties:
         name:
           type: string
-          example: 10.CSV
+          example: 10.db3
         size:
           type: integer
           format: uint32

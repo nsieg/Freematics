@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../list.cpp"
+//#include <sqlite3.h>
 #include <iostream>
 
 TEST(BeaconList, ShouldThrowOnWrongIndex) {
@@ -97,5 +98,20 @@ TEST(StringProcessing, ShouldCut) {
   strncpy(buf, one, idxEnd);
   std::cout << buf;
 
-  EXPECT_FALSE(strcmp(buf, expected));
+  EXPECT_TRUE(strcmp(buf, expected));
+}
+
+TEST(DateProcessing, ShouldTransform) {
+  int time = 12364680;
+  int date = 180323;
+  char exp[] = "2023-03-18 12:36:46.080";
+  
+  char buff[30];
+
+  sprintf(buff, "20%02u-%02u-%02u %02u:%02u:%02u.%03u",
+    date % 100, (date % 10000) / 100, date / 10000, 
+    time / 1000000, (time % 1000000) / 10000, (time % 10000) / 100, time % 100);
+
+  std::cout << buff;
+  EXPECT_FALSE(strcmp(buff, exp));
 }

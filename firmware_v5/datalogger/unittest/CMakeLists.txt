@@ -4,6 +4,16 @@ project(my_project)
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 14)
 
+#file(GLOB sqlite_src
+#     "/mnt/c/Users/NSieg/OneDrive/Dokumente/PlatformIO/Projects/Freematics/libraries/Esp32-Arduino-Sqlite/src/*.h"
+#     "/mnt/c/Users/NSieg/OneDrive/Dokumente/PlatformIO/Projects/Freematics/libraries/Esp32-Arduino-Sqlite/src/*.cpp"
+#     "/mnt/c/Users/NSieg/OneDrive/Dokumente/PlatformIO/Projects/Freematics/libraries/Esp32-Arduino-Sqlite/src/*.c"
+#)
+
+#INCLUDE_DIRECTORIES(/mnt/c/Users/NSieg/OneDrive/Dokumente/PlatformIO/Projects/Freematics/libraries/Esp32-Arduino-Sqlite/src)
+#LINK_DIRECTORIES(/mnt/c/Users/NSieg/OneDrive/Dokumente/PlatformIO/Projects/Freematics/libraries/Esp32-Arduino-Sqlite/src)
+#ADD_LIBRARY(sqlite ${sqlite_src})
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -16,13 +26,13 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(
-  hello_test
-  hello_test.cc
+  beacon
+  beacon.cc
 )
 target_link_libraries(
-  hello_test
+  beacon
   GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(hello_test)
+gtest_discover_tests(beacon)
